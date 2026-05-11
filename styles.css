@@ -1,0 +1,234 @@
+:root {
+  --bg: #020711;
+  --panel: rgba(4, 14, 28, 0.86);
+  --text: #e8f7ff;
+  --muted: #9fc3d0;
+  --line: rgba(128, 218, 255, 0.26);
+  --accent: #30d6ff;
+  --radius: 8px;
+  font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(21, 106, 136, 0.36), transparent 34%),
+    linear-gradient(180deg, #051d34 0%, #020711 70%, #010308 100%);
+}
+
+button {
+  font: inherit;
+}
+
+.game-shell {
+  position: relative;
+  width: min(100vw, 480px);
+  height: min(100vh, 960px);
+  min-height: 640px;
+  overflow: hidden;
+  background: #020711;
+  box-shadow: 0 0 64px rgba(0, 0, 0, 0.56);
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 32px;
+  padding: 32px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(37, 158, 195, 0.22), transparent 30%),
+    linear-gradient(180deg, rgba(1, 7, 17, 0.38), rgba(1, 5, 12, 0.88));
+  transition: opacity 240ms ease, visibility 240ms ease;
+}
+
+.overlay--title {
+  background:
+    linear-gradient(180deg, rgba(1, 7, 17, 0.26), rgba(1, 5, 12, 0.82)),
+    url("assets/abyss-cockpit.png") center / cover no-repeat;
+}
+
+.overlay--title {
+  background:
+    linear-gradient(180deg, rgba(1, 5, 12, 0.28), rgba(1, 5, 12, 0.82)),
+    url("assets/abyss-cockpit-bg.png") center / cover no-repeat;
+}
+
+.overlay--title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(90, 224, 255, 0.16), transparent 28%),
+    linear-gradient(180deg, transparent 0%, rgba(1, 4, 10, 0.72) 100%);
+}
+
+.overlay--title > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.brand {
+  max-width: 360px;
+}
+
+.brand__mark,
+.panel__eyebrow {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  color: #f2fbff;
+  font-size: clamp(42px, 11vw, 56px);
+  line-height: 1.16;
+  font-weight: 800;
+  text-shadow: 0 0 24px rgba(48, 214, 255, 0.44);
+}
+
+.overlay--title h1 {
+  text-shadow: 0 0 18px rgba(8, 17, 26, 0.95), 0 0 34px rgba(48, 214, 255, 0.62);
+}
+
+h2 {
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+p {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.panel {
+  width: min(100%, 360px);
+  padding: 32px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.42);
+}
+
+.overlay--danger {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 79, 95, 0.18), transparent 30%),
+    linear-gradient(180deg, rgba(17, 1, 5, 0.36), rgba(7, 1, 4, 0.9));
+}
+
+.primary-button,
+.icon-button {
+  border: 1px solid rgba(220, 248, 255, 0.38);
+  border-radius: var(--radius);
+  color: #021019;
+  background: linear-gradient(180deg, #7ce9ff, #21bfe8);
+  box-shadow: 0 10px 28px rgba(24, 180, 228, 0.26);
+  cursor: pointer;
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+}
+
+.primary-button {
+  min-width: 192px;
+  min-height: 56px;
+  padding: 0 24px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.primary-button:hover,
+.icon-button:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 12px 32px rgba(24, 180, 228, 0.36);
+}
+
+.primary-button:active,
+.icon-button:active {
+  transform: translateY(2px) scale(0.98);
+  filter: brightness(0.92);
+}
+
+.primary-button--danger {
+  color: #fff;
+  background: linear-gradient(180deg, #ff7480, #d72638);
+  box-shadow: 0 10px 28px rgba(255, 79, 95, 0.26);
+}
+
+.icon-button {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  color: #e8f7ff;
+  background: rgba(4, 14, 28, 0.72);
+  backdrop-filter: blur(10px);
+  z-index: 4;
+}
+
+.icon-button[aria-pressed="false"] {
+  color: #86a8b8;
+  background: rgba(4, 14, 28, 0.52);
+}
+
+@media (max-height: 700px) {
+  .game-shell {
+    min-height: 560px;
+  }
+
+  .overlay {
+    gap: 24px;
+    padding: 24px;
+  }
+
+  h1 {
+    font-size: 40px;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+}

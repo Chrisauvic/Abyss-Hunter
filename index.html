@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>深渊猎宝 Abyss Hunter</title>
+  <link rel="preload" as="image" href="assets/abyss-cockpit-bg.png">
+  <link rel="preload" as="image" href="assets/submarine.png">
+  <link rel="preload" as="image" href="assets/rock.png">
+  <link rel="preload" as="image" href="assets/mine.png">
+  <link rel="preload" as="image" href="assets/artifact.png">
+  <link rel="preload" as="image" href="assets/exit-beacon.png">
+  <link rel="preload" as="image" href="assets/abyss-beast.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="game-shell" aria-label="深渊猎宝 Abyss Hunter">
+    <canvas id="game" width="414" height="896" aria-label="深海潜艇探索视野"></canvas>
+
+    <section id="titleScreen" class="overlay overlay--title">
+      <div class="brand">
+        <span class="brand__mark">ABYSS HUNTER</span>
+        <h1>深渊猎宝</h1>
+        <p>驾驶潜艇穿过遗迹海沟，收集全部文物后驶向信标出口。</p>
+      </div>
+      <button id="startBtn" class="primary-button" type="button">开始探索</button>
+    </section>
+
+    <section id="levelScreen" class="overlay overlay--panel hidden" aria-live="polite">
+      <div class="panel">
+        <span class="panel__eyebrow">MISSION CLEAR</span>
+        <h2 id="levelTitle">文物已回收</h2>
+        <p id="levelText">出口信标稳定，准备下潜到下一层。</p>
+        <button id="nextBtn" class="primary-button" type="button">下一关</button>
+      </div>
+    </section>
+
+    <section id="gameOverScreen" class="overlay overlay--danger hidden" aria-live="assertive">
+      <div class="panel">
+        <span class="panel__eyebrow">HULL FAILURE</span>
+        <h2>Game Over</h2>
+        <p>船体完整度归零，救援浮标已释放。</p>
+        <button id="retryBtn" class="primary-button primary-button--danger" type="button">重新挑战</button>
+      </div>
+    </section>
+
+    <button id="musicBtn" class="icon-button" type="button" aria-label="背景音乐开关" aria-pressed="true">♪</button>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
