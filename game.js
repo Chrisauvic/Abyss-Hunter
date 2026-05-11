@@ -372,9 +372,7 @@ function draw() {
 function drawSea() {
   const cockpit = sprites[`cockpit${levelIndex + 1}`] || sprites.cockpit1;
   if (isImageReady(cockpit)) {
-    ctx.fillStyle = "#01040a";
-    ctx.fillRect(0, 0, VIEW.w, VIEW.h);
-    drawImageContain(cockpit, 0, 0, VIEW.w, VIEW.h, 0.965);
+    drawImageCover(cockpit, 0, 0, VIEW.w, VIEW.h);
     ctx.fillStyle = "rgba(0, 8, 18, 0.34)";
     ctx.fillRect(0, 0, VIEW.w, VIEW.h);
   } else {
@@ -838,8 +836,11 @@ function createAudio() {
   const ac = new AudioContext();
   const master = ac.createGain();
   const musicGain = ac.createGain();
-  master.gain.value = 0.58;
-  musicGain.gain.value = 0.18;
+  const droneGain = ac.createGain();
+  master.gain.value = 0.78;
+  musicGain.gain.value = 0.34;
+  droneGain.gain.value = 0.045;
+  droneGain.connect(musicGain);
   musicGain.connect(master);
   master.connect(ac.destination);
   let musicOn = true;
@@ -848,11 +849,29 @@ function createAudio() {
   let musicMode = "explore";
   let musicLevel = 0;
   const musicProfiles = [
-    { scale: [110, 146.83, 164.81, 196, 220, 261.63, 293.66, 329.63], gain: 0.18, noise: 0.012 },
-    { scale: [98, 130.81, 146.83, 174.61, 196, 233.08, 261.63, 293.66], gain: 0.2, noise: 0.016 },
-    { scale: [82.41, 110, 123.47, 164.81, 185, 220, 246.94, 329.63], gain: 0.22, noise: 0.022 }
+    { scale: [110, 146.83, 164.81, 196, 220, 261.63, 293.66, 329.63], gain: 0.34, noise: 0.02, drone: 55 },
+    { scale: [98, 130.81, 146.83, 174.61, 196, 233.08, 261.63, 293.66], gain: 0.36, noise: 0.024, drone: 49 },
+    { scale: [82.41, 110, 123.47, 164.81, 185, 220, 246.94, 329.63], gain: 0.38, noise: 0.03, drone: 41.2 }
   ];
-  const clearProfile = { scale: [261.63, 329.63, 392, 523.25, 659.25, 783.99], gain: 0.22, noise: 0.004 };
+  const clearProfile = { scale: [261.63, 329.63, 392, 523.25, 659.25, 783.99], gain: 0.38, noise: 0.006, drone: 130.81 };
+  const droneA = ac.createOscillator();
+  const droneB = ac.createOscillator();
+  droneA.type = "sine";
+  droneB.type = "triangle";
+  droneA.frequency.value = musicProfiles[0].drone;
+  droneB.frequency.value = musicProfiles[0].drone * 1.5;
+  droneA.connect(droneGain);
+  droneB.connect(droneGain);
+  droneA.start();
+  droneB.start();
+
+  function currentProfile() {
+    return musicMode === "clear" ? clearProfile : musicProfiles[musicLevel] || musicProfiles[0];
+  }
+
+  function currentMusicVolume() {
+    return musicOn ? currentProfile().gain : 0.0001;
+  }
 
   function tone(freq, dur, type, gain, dest = master, when = ac.currentTime) {
     const osc = ac.createOscillator();
@@ -889,12 +908,13 @@ function createAudio() {
   function tickMusic() {
     if (!musicOn || ac.state !== "running") return;
     const now = ac.currentTime;
-    const profile = musicMode === "clear" ? clearProfile : musicProfiles[musicLevel] || musicProfiles[0];
+    const profile = currentProfile();
     const root = profile.scale[step % profile.scale.length];
-    tone(root, 1.8, "sine", 0.035 * profile.gain / 0.18, musicGain, now);
-    tone(root * (musicMode === "clear" ? 2 : 1.5), 1.2, "triangle", 0.018 * profile.gain / 0.18, musicGain, now + 0.08);
+    tone(root, 1.8, "sine", 0.055, musicGain, now);
+    tone(root * (musicMode === "clear" ? 2 : 1.5), 1.2, "triangle", 0.032, musicGain, now + 0.08);
+    tone(root * 0.5, 2.2, "sine", 0.022, musicGain, now + 0.02);
     if (step % (musicMode === "clear" ? 3 : 4) === 0) noise(1.4, profile.noise, now);
-    if (musicMode === "clear" && step % 4 === 0) tone(root * 2.5, 0.18, "triangle", 0.035, musicGain, now + 0.2);
+    if (musicMode === "clear" && step % 4 === 0) tone(root * 2.5, 0.18, "triangle", 0.06, musicGain, now + 0.2);
     step += 1;
   }
 
@@ -903,11 +923,14 @@ function createAudio() {
 
   return {
     resume() {
-      ac.resume();
+      const result = ac.resume();
+      if (result && typeof result.then === "function") result.then(tickMusic);
+      else tickMusic();
     },
     toggleMusic() {
       musicOn = !musicOn;
-      musicGain.gain.setTargetAtTime(musicOn ? 0.18 : 0.0001, ac.currentTime, 0.08);
+      musicGain.gain.setTargetAtTime(currentMusicVolume(), ac.currentTime, 0.08);
+      droneGain.gain.setTargetAtTime(musicOn ? 0.045 : 0.0001, ac.currentTime, 0.08);
       musicBtn.setAttribute("aria-pressed", String(musicOn));
       musicBtn.textContent = musicOn ? "♪" : "×";
       if (musicOn) tickMusic();
@@ -916,7 +939,11 @@ function createAudio() {
       musicMode = mode;
       musicLevel = clamp(level, 0, musicProfiles.length - 1);
       step = 0;
-      musicGain.gain.setTargetAtTime(musicOn ? (mode === "clear" ? 0.22 : 0.18) : 0.0001, ac.currentTime, 0.1);
+      const profile = currentProfile();
+      musicGain.gain.setTargetAtTime(currentMusicVolume(), ac.currentTime, 0.1);
+      droneGain.gain.setTargetAtTime(musicOn ? 0.045 : 0.0001, ac.currentTime, 0.1);
+      droneA.frequency.setTargetAtTime(profile.drone, ac.currentTime, 0.18);
+      droneB.frequency.setTargetAtTime(profile.drone * 1.5, ac.currentTime, 0.18);
       if (musicOn) tickMusic();
     },
     playClick() { tone(420, 0.08, "triangle", 0.08); },

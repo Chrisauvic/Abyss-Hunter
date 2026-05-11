@@ -70,15 +70,8 @@ button {
 
 .overlay--title {
   background:
-    linear-gradient(180deg, rgba(1, 7, 17, 0.26), rgba(1, 5, 12, 0.82)),
-    url("assets/abyss-cockpit.png") center / contain no-repeat,
-    #01040a;
-}
-
-.overlay--title {
-  background:
     linear-gradient(180deg, rgba(1, 5, 12, 0.28), rgba(1, 5, 12, 0.82)),
-    url("assets/abyss-cockpit-bg.png") center / cover no-repeat;
+    url("assets/abyss-cockpit.png") center / cover no-repeat;
 }
 
 .overlay--title::after {
