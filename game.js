@@ -15,18 +15,22 @@ const VIEW = { w: 414, h: 896 };
 const PANEL_H = 176;
 const WORLD = { w: 1280, h: 1760 };
 const LEVELS = [
-  { artifacts: 4, rocks: 12, mines: 4, beasts: 1, currents: 2, beastSpeed: 24 },
-  { artifacts: 5, rocks: 16, mines: 6, beasts: 2, currents: 3, beastSpeed: 32 },
-  { artifacts: 6, rocks: 20, mines: 8, beasts: 3, currents: 4, beastSpeed: 40 }
+  { artifacts: 5, rocks: 15, mines: 5, beasts: 2, currents: 3, beastSpeed: 26, worldW: 1500, worldH: 2040, creatureTypes: ["beast"] },
+  { artifacts: 7, rocks: 22, mines: 8, beasts: 3, currents: 4, beastSpeed: 34, worldW: 1840, worldH: 2460, creatureTypes: ["beast", "jellyfish"] },
+  { artifacts: 9, rocks: 30, mines: 11, beasts: 4, currents: 5, beastSpeed: 43, worldW: 2200, worldH: 2920, creatureTypes: ["beast", "jellyfish", "eel"] }
 ];
 const SPRITE_SOURCES = {
-  cockpit: "assets/abyss-cockpit.png",
+  cockpit1: "assets/abyss-cockpit.png",
+  cockpit2: "assets/abyss-cockpit-level2.png",
+  cockpit3: "assets/abyss-cockpit-level3.png",
   player: "assets/submarine.png",
   rock: "assets/rock.png",
   mine: "assets/mine.png",
   artifact: "assets/artifact.png",
   exit: "assets/exit-beacon.png",
-  beast: "assets/abyss-beast.png"
+  beast: "assets/abyss-beast.png",
+  jellyfish: "assets/jellyfish.png",
+  eel: "assets/armored-eel.png"
 };
 const sprites = Object.fromEntries(
   Object.entries(SPRITE_SOURCES).map(([key, src]) => {
@@ -127,6 +131,8 @@ function hide(el) {
 function initLevel(index) {
   levelIndex = index;
   const spec = LEVELS[levelIndex];
+  WORLD.w = spec.worldW;
+  WORLD.h = spec.worldH;
   Object.assign(game, {
     player: makePlayer(),
     artifacts: [],
@@ -136,7 +142,7 @@ function initLevel(index) {
     currents: [],
     bubbles: [],
     explosions: [],
-    exit: { x: WORLD.w - 154, y: WORLD.h - 170, r: 46, open: false },
+    exit: { x: WORLD.w - 170, y: WORLD.h - 190, r: 46, open: false },
     collected: 0,
     scanPulse: 0
   });
@@ -145,14 +151,18 @@ function initLevel(index) {
     game.bubbles.push({ x: rand(0, WORLD.w), y: rand(0, WORLD.h), r: rand(1, 3.5), s: rand(8, 28), a: rand(0.16, 0.54) });
   }
 
-  placeMany(game.artifacts, spec.artifacts, () => ({ x: rand(120, WORLD.w - 120), y: rand(180, WORLD.h - 220), r: 18, spin: rand(0, TAU), got: false }), 104);
+  placeMany(game.artifacts, spec.artifacts, () => ({ x: rand(150, WORLD.w - 150), y: rand(220, WORLD.h - 260), r: 18, spin: rand(0, TAU), got: false }), 132);
   placeMany(game.rocks, spec.rocks, () => ({ x: rand(90, WORLD.w - 90), y: rand(160, WORLD.h - 220), r: rand(34, 62), sides: Math.floor(rand(5, 8)), rot: rand(0, TAU), hit: 0 }), 96);
   placeMany(game.mines, spec.mines, () => ({ x: rand(120, WORLD.w - 120), y: rand(190, WORLD.h - 220), r: 24, armed: true, pulse: rand(0, TAU) }), 108);
   placeMany(game.currents, spec.currents, () => {
     const angle = rand(0, TAU);
     return { x: rand(160, WORLD.w - 160), y: rand(240, WORLD.h - 260), r: rand(70, 98), angle, force: rand(48, 68), spin: rand(0, TAU) };
   }, 150);
-  placeMany(game.beasts, spec.beasts, () => ({ x: rand(420, WORLD.w - 120), y: rand(420, WORLD.h - 220), r: 28, speed: spec.beastSpeed, phase: rand(0, TAU), bite: 0 }), 180);
+  placeMany(game.beasts, spec.beasts, () => {
+    const type = spec.creatureTypes[Math.floor(rand(0, spec.creatureTypes.length))];
+    return { x: rand(520, WORLD.w - 140), y: rand(520, WORLD.h - 240), r: type === "jellyfish" ? 34 : type === "eel" ? 32 : 28, speed: spec.beastSpeed * creatureSpeed(type), phase: rand(0, TAU), bite: 0, type };
+  }, 210);
+  if (audio) audio.setMusicMode("explore", levelIndex);
 }
 
 function placeMany(list, count, maker, minGap) {
@@ -166,6 +176,18 @@ function placeMany(list, count, maker, minGap) {
       .every((other) => Math.hypot(item.x - other.x, item.y - other.y) > minGap);
     if (clearStart && clearExit && far) list.push(item);
   }
+}
+
+function creatureSpeed(type) {
+  if (type === "jellyfish") return 0.72;
+  if (type === "eel") return 1.18;
+  return 1;
+}
+
+function creatureDamage(type) {
+  if (type === "jellyfish") return 24;
+  if (type === "eel") return 28;
+  return 20;
 }
 
 function startGame() {
@@ -193,12 +215,14 @@ function nextLevel() {
 
 function gameOver() {
   state = "gameover";
+  if (audio) audio.setMusicMode("clear", levelIndex);
   audio.playFail();
   show(gameOverScreen);
 }
 
 function completeLevel() {
   state = "clear";
+  if (audio) audio.setMusicMode("clear", levelIndex);
   audio.playWin();
   if (levelIndex >= LEVELS.length - 1) {
     levelTitle.textContent = "深渊猎宝完成";
@@ -292,11 +316,12 @@ function update(dt) {
     beast.phase += dt * 5;
     beast.bite = Math.max(0, beast.bite - dt);
     const angle = Math.atan2(player.y - beast.y, player.x - beast.x);
-    beast.x += Math.cos(angle) * beast.speed * dt;
-    beast.y += Math.sin(angle) * beast.speed * dt;
+    const drift = beast.type === "jellyfish" ? Math.sin(beast.phase) * 0.9 : 0;
+    beast.x += Math.cos(angle + drift * 0.22) * beast.speed * dt;
+    beast.y += Math.sin(angle + drift * 0.22) * beast.speed * dt;
     if (dist(player, beast) < player.r + beast.r) {
       beast.bite = 0.6;
-      damage(20);
+      damage(creatureDamage(beast.type));
       player.vx -= Math.cos(angle) * 160;
       player.vy -= Math.sin(angle) * 160;
     }
@@ -345,8 +370,11 @@ function draw() {
 }
 
 function drawSea() {
-  if (isImageReady(sprites.cockpit)) {
-    drawImageCover(sprites.cockpit, 0, 0, VIEW.w, VIEW.h);
+  const cockpit = sprites[`cockpit${levelIndex + 1}`] || sprites.cockpit1;
+  if (isImageReady(cockpit)) {
+    ctx.fillStyle = "#01040a";
+    ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+    drawImageContain(cockpit, 0, 0, VIEW.w, VIEW.h, 0.965);
     ctx.fillStyle = "rgba(0, 8, 18, 0.34)";
     ctx.fillRect(0, 0, VIEW.w, VIEW.h);
   } else {
@@ -446,6 +474,13 @@ function drawImageCover(image, x, y, width, height) {
   const sourceX = (image.naturalWidth - sourceW) / 2;
   const sourceY = (image.naturalHeight - sourceH) / 2;
   ctx.drawImage(image, sourceX, sourceY, sourceW, sourceH, x, y, width, height);
+}
+
+function drawImageContain(image, x, y, width, height, scaleFactor = 1) {
+  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight) * scaleFactor;
+  const drawW = image.naturalWidth * scale;
+  const drawH = image.naturalHeight * scale;
+  ctx.drawImage(image, x + (width - drawW) / 2, y + (height - drawH) / 2, drawW, drawH);
 }
 
 function drawRock(rock, cam) {
@@ -606,7 +641,14 @@ function drawBeast(beast, cam) {
   ctx.save();
   ctx.shadowColor = beast.bite > 0 ? "rgba(255, 79, 95, 0.44)" : "rgba(81, 200, 255, 0.28)";
   ctx.shadowBlur = beast.bite > 0 ? 18 : 12;
-  const drawn = drawSpriteRect(sprites.beast, x, y + Math.sin(beast.phase) * 1.6, beast.r * 3.45, beast.r * 1.55, angle, beast.bite > 0 ? 0.92 : 1);
+  let drawn = false;
+  if (beast.type === "jellyfish") {
+    drawn = drawSpriteRect(sprites.jellyfish, x, y + Math.sin(beast.phase) * 3, beast.r * 2.3, beast.r * 3.25, Math.sin(beast.phase) * 0.08, beast.bite > 0 ? 0.88 : 1);
+  } else if (beast.type === "eel") {
+    drawn = drawSpriteRect(sprites.eel, x, y + Math.sin(beast.phase) * 1.4, beast.r * 3.65, beast.r * 2.7, angle + Math.sin(beast.phase) * 0.12, beast.bite > 0 ? 0.9 : 1);
+  } else {
+    drawn = drawSpriteRect(sprites.beast, x, y + Math.sin(beast.phase) * 1.6, beast.r * 3.45, beast.r * 1.55, angle, beast.bite > 0 ? 0.92 : 1);
+  }
   ctx.restore();
   if (drawn) return;
   ctx.save();
@@ -803,7 +845,14 @@ function createAudio() {
   let musicOn = true;
   let timer = null;
   let step = 0;
-  const scale = [110, 146.83, 164.81, 196, 220, 261.63, 293.66, 329.63];
+  let musicMode = "explore";
+  let musicLevel = 0;
+  const musicProfiles = [
+    { scale: [110, 146.83, 164.81, 196, 220, 261.63, 293.66, 329.63], gain: 0.18, noise: 0.012 },
+    { scale: [98, 130.81, 146.83, 174.61, 196, 233.08, 261.63, 293.66], gain: 0.2, noise: 0.016 },
+    { scale: [82.41, 110, 123.47, 164.81, 185, 220, 246.94, 329.63], gain: 0.22, noise: 0.022 }
+  ];
+  const clearProfile = { scale: [261.63, 329.63, 392, 523.25, 659.25, 783.99], gain: 0.22, noise: 0.004 };
 
   function tone(freq, dur, type, gain, dest = master, when = ac.currentTime) {
     const osc = ac.createOscillator();
@@ -840,14 +889,16 @@ function createAudio() {
   function tickMusic() {
     if (!musicOn || ac.state !== "running") return;
     const now = ac.currentTime;
-    const root = scale[step % scale.length];
-    tone(root, 1.8, "sine", 0.035, musicGain, now);
-    tone(root * 1.5, 1.2, "triangle", 0.018, musicGain, now + 0.08);
-    if (step % 4 === 0) noise(1.4, 0.012, now);
+    const profile = musicMode === "clear" ? clearProfile : musicProfiles[musicLevel] || musicProfiles[0];
+    const root = profile.scale[step % profile.scale.length];
+    tone(root, 1.8, "sine", 0.035 * profile.gain / 0.18, musicGain, now);
+    tone(root * (musicMode === "clear" ? 2 : 1.5), 1.2, "triangle", 0.018 * profile.gain / 0.18, musicGain, now + 0.08);
+    if (step % (musicMode === "clear" ? 3 : 4) === 0) noise(1.4, profile.noise, now);
+    if (musicMode === "clear" && step % 4 === 0) tone(root * 2.5, 0.18, "triangle", 0.035, musicGain, now + 0.2);
     step += 1;
   }
 
-  timer = window.setInterval(tickMusic, 900);
+  timer = window.setInterval(tickMusic, 720);
   tickMusic();
 
   return {
@@ -859,6 +910,13 @@ function createAudio() {
       musicGain.gain.setTargetAtTime(musicOn ? 0.18 : 0.0001, ac.currentTime, 0.08);
       musicBtn.setAttribute("aria-pressed", String(musicOn));
       musicBtn.textContent = musicOn ? "♪" : "×";
+      if (musicOn) tickMusic();
+    },
+    setMusicMode(mode, level = musicLevel) {
+      musicMode = mode;
+      musicLevel = clamp(level, 0, musicProfiles.length - 1);
+      step = 0;
+      musicGain.gain.setTargetAtTime(musicOn ? (mode === "clear" ? 0.22 : 0.18) : 0.0001, ac.currentTime, 0.1);
       if (musicOn) tickMusic();
     },
     playClick() { tone(420, 0.08, "triangle", 0.08); },
